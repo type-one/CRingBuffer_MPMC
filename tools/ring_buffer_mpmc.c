@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------//
-// CRingBuffer MPMC - Spare time development for fun                           //
+// CRingBuffer MPMC - FIFO helper                                              //
 // (c) 2023 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
 //                                                                             //
 // https://github.com/type-one/CRingBuffer_MPSC                                //
