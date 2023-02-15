@@ -1,9 +1,11 @@
 # CRingBuffer MPMC
 
-Portable C99/C11 implementation of a Ring Buffer with single consumer/producer and multiple
-consumers/producers support.
+Portable C99/C11 implementation of a Ring Buffer with single consumer/producer (lock-free SPSC)
+and multiple consumers/producers support (SPMC, MPMC, MPSC).
 
 https://github.com/type-one/CRingBuffer_MPMC
+
+This implementation is provided "as is", without warranty of any kind, express or implied.
 
 # What
 
