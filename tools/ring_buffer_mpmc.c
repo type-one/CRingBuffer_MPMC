@@ -106,7 +106,7 @@ bool ring_buffer_push_sp(struct ring_buffer_mpmc* fifo, void* elem)
 {
     if (!fifo || !elem)
     {
-        return -1;
+        return false;
     }
 
     sync_read_acquire();
@@ -141,7 +141,7 @@ bool ring_buffer_push_mp(struct ring_buffer_mpmc* fifo, void* elem)
 {
     if (!fifo || !elem)
     {
-        return -1;
+        return false;
     }
 
 #if defined(_WIN32)
@@ -169,7 +169,7 @@ bool ring_buffer_pop_sc(struct ring_buffer_mpmc* fifo, void** elem)
 {
     if (!fifo || !elem)
     {
-        return -1;
+        return false;
     }
 
     sync_read_acquire();
@@ -215,7 +215,7 @@ bool ring_buffer_pop_mc(struct ring_buffer_mpmc* fifo, void** elem)
 {
     if (!fifo || !elem)
     {
-        return -1;
+        return false;
     }
 
 #if defined(_WIN32)
