@@ -87,8 +87,8 @@ extern "C"
 #define sync_atomic_inc_64(ref) InterlockedIncrementAcquire64(&(ref))
 #define sync_atomic_load(ref) (ref)
 #define sync_atomic_store(ref, val) (ref = val)
-#define sync_atomic_exchange_32(ref, val) InterlockedExchange(&ref, val)
-#define sync_atomic_exchange_64(ref, val) InterlockedExchange64(&ref, val)
+#define sync_atomic_exchange_32(ref, val) InterlockedExchangeAcquire(&ref, val)
+#define sync_atomic_exchange_64(ref, val) InterlockedExchangeAcquire64(&ref, val)
 #else
 // fallback: assuming GCC/Clang
 #define sync_read_acquire() __sync_synchronize()
