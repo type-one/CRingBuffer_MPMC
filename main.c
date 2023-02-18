@@ -107,7 +107,7 @@
 #define LOG_ERROR(...)
 #else
 #define LOG_INFO(...) printf(__VA_ARGS__)
-#define LOG_ERROR(...) fprintf(stderr, __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_ERROR(...) fprintf(stderr, __VA_ARGS__)
 #endif
 
 struct thread_context

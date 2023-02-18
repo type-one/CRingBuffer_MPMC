@@ -76,6 +76,8 @@ if(LINUX)
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math -funsafe-math-optimizations -D NDEBUG")
 
     set(CMAKE_C_FLAGS "-march=native")
+	# uncomment to force POSIX instead of C11 threads/atomics
+	# set(CMAKE_C_FLAGS "-march=native -D__STDC_NO_THREADS__ -D__STDC_NO_ATOMICS__")
     set(CMAKE_C_FLAGS_DEBUG "-g -Wall -Wextra -D DEBUG")
     set(CMAKE_C_FLAGS_RELEASE "-O3 -ffast-math -funsafe-math-optimizations -D NDEBUG")
 
