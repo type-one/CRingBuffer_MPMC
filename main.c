@@ -24,6 +24,7 @@
 #include "tools/atomic_helper.h"
 #include "tools/ring_buffer_mpmc.h"
 #include "tools/sync_object.h"
+#include "tools/timer_chrono.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,21 +39,27 @@
 #include <threads.h>
 #endif
 
-/* single producer, single consumer, running as fast as possible without blocking (lock-free) */
-#define PRODUCER_NO_WAIT 1
-#define CONSUMER_NO_WAIT 1
-#define CONSUMER_SIMULATE_WORK_LOAD 0
-#define SINGLE_CONSUMER 1
-#define SINGLE_PRODUCER 1
-#define PRODUCER_NO_YIELD 1
+/* avoid malloc/free in producer/consumer */
+#define NO_DYNAMIC_ALLOC 1
 
-/* multiple producers, multiple consumers, running as fast as possible without waiting */
+/* no printf output during computation, better to benchmark */
+#define NO_STDIO 0
+
+/* single producer, single consumer, running as fast as possible without blocking (lock-free) */
 //#define PRODUCER_NO_WAIT 1
 //#define CONSUMER_NO_WAIT 1
 //#define CONSUMER_SIMULATE_WORK_LOAD 0
-//#define SINGLE_CONSUMER 0
-//#define SINGLE_PRODUCER 0
+//#define SINGLE_CONSUMER 1
+//#define SINGLE_PRODUCER 1
 //#define PRODUCER_NO_YIELD 1
+
+/* multiple producers, multiple consumers, running as fast as possible without waiting */
+#define PRODUCER_NO_WAIT 1
+#define CONSUMER_NO_WAIT 1
+#define CONSUMER_SIMULATE_WORK_LOAD 0
+#define SINGLE_CONSUMER 0
+#define SINGLE_PRODUCER 0
+#define PRODUCER_NO_YIELD 1
 
 /* multiple producers, multiple consumers, wait for readers, wait for writers, simulate work load */
 //#define PRODUCER_NO_WAIT 0
@@ -78,6 +85,31 @@
 //#define SINGLE_PRODUCER 1
 //#define PRODUCER_NO_YIELD 0
 
+#if SINGLE_PRODUCER
+#define NB_PRODUCERS 1
+#else
+#define NB_PRODUCERS 4
+#endif
+
+#if SINGLE_CONSUMER
+#define NB_CONSUMERS 1
+#else
+#define NB_CONSUMERS 8
+#endif
+
+#define NB_THREADS (NB_PRODUCERS + NB_CONSUMERS)
+
+#define NB_MSGS_PER_PRODUCER 1000
+#define NB_MSGS_TOTAL (NB_PRODUCERS * NB_MSGS_PER_PRODUCER)
+
+#if NO_STDIO
+#define LOG_INFO(...)
+#define LOG_ERROR(...)
+#else
+#define LOG_INFO(...) printf(__VA_ARGS__)
+#define LOG_ERROR(...) fprintf(stderr, __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__)
+#endif
+
 struct thread_context
 {
     _atomic_bool m_stop_thread;
@@ -85,7 +117,26 @@ struct thread_context
     struct sync_object m_write_sync;
     struct sync_object m_read_sync;
     struct sync_object m_start_sync;
+    _atomic_long m_msg_count;
+    _atomic_long m_msg_skipped;
 };
+
+static void dec_and_check_end(struct thread_context* ctxt)
+{
+    sync_atomic_dec_32(ctxt->m_msg_count);
+    sync_read_write();
+    if (sync_atomic_load(ctxt->m_msg_count) <= 0)
+    {
+        sync_atomic_store(ctxt->m_stop_thread, true);
+        sync_write_release();
+        sync_object_broadcast(&(ctxt->m_write_sync));
+        sync_object_broadcast(&(ctxt->m_read_sync));
+    }
+}
+
+#if NO_DYNAMIC_ALLOC
+static char st_message[NB_PRODUCERS][NB_MSGS_PER_PRODUCER][256];
+#endif
 
 #if defined(_WIN32)
 static DWORD WINAPI producer_thread(LPVOID arg)
@@ -109,7 +160,7 @@ static int producer_thread(void* arg)
     char message[256];
 
     int count = 0;
-    while (ctxt && count++ < 1000)
+    while (ctxt && count++ < NB_MSGS_PER_PRODUCER)
     {
         sync_read_acquire();
         if (sync_atomic_load(ctxt->m_stop_thread))
@@ -119,11 +170,18 @@ static int producer_thread(void* arg)
 
         /* produce something */
         snprintf(message, sizeof(message), "job %d-%d from producer %d", count, my_id, my_id);
+#if NO_DYNAMIC_ALLOC
+        char* duplicata = &st_message[my_id - 1][count][0];
+        strncpy(duplicata, message, sizeof(st_message[my_id - 1][count]));
+#else
         char* duplicata = strdup(message);
+#endif
 
         if (!duplicata)
         {
-            fprintf(stderr, "producer %d could not strdup for job %d-%d\n", my_id, count, my_id);
+            LOG_ERROR("producer %d could not strdup for job %d-%d\n", my_id, count, my_id);
+            sync_atomic_inc_32(ctxt->m_msg_skipped);
+            dec_and_check_end(ctxt);
         }
         else
         {
@@ -133,7 +191,12 @@ static int producer_thread(void* arg)
             if (!ring_buffer_push_mp(&(ctxt->m_fifo), duplicata))
 #endif
             {
-                printf("producer %d: buffer full, skip job %d-%d\n", my_id, count, my_id);
+                LOG_INFO("producer %d: buffer full, skip job %d-%d\n", my_id, count, my_id);
+#if !NO_DYNAMIC_ALLOC
+                free(duplicata);
+#endif
+                sync_atomic_inc_32(ctxt->m_msg_skipped);
+                dec_and_check_end(ctxt);
             }
             else { sync_object_signal(&(ctxt->m_write_sync)); }
         }
@@ -184,9 +247,7 @@ static int consumer_thread(void* arg)
         /* wait signal from main thread before starting to work */
         sync_object_wait_for_signal(&(ctxt->m_start_sync));
     }
-
-    int empty_count = 0;
-    while (ctxt && (empty_count < 4))
+    while (ctxt)
     {
         sync_read_acquire();
         if (sync_atomic_load(ctxt->m_stop_thread))
@@ -207,18 +268,16 @@ static int consumer_thread(void* arg)
         if (!ring_buffer_pop_mc(&(ctxt->m_fifo), &elem))
 #endif
         {
-            ++empty_count;
-            printf("consumer %d: buffer empty, skip turn\n", my_id);
+            LOG_INFO("consumer %d: buffer empty, skip turn\n", my_id);
         }
         else if (!elem)
         {
-            fprintf(stderr, "consumer %d: anomaly - retrieved ptr is null, skip turn\n", my_id);
+            LOG_ERROR("consumer %d: anomaly - retrieved ptr is null, skip turn\n", my_id);
             sync_object_signal(&(ctxt->m_read_sync));
         }
         else
         {
-            empty_count = 0;
-            printf("consumer %d: received %s\n", my_id, (char*)elem);
+            LOG_INFO("consumer %d: received %s\n", my_id, (char*)elem);
 
             /* job taken */
             sync_object_signal(&(ctxt->m_read_sync));
@@ -228,7 +287,11 @@ static int consumer_thread(void* arg)
             for (int i = 0; i < (rand() & 0xffff); ++i) { }
 #endif
 
+#if !NO_DYNAMIC_ALLOC
             free(elem);
+#endif
+
+            dec_and_check_end(ctxt);
         }
     }
 
@@ -243,20 +306,6 @@ static int consumer_thread(void* arg)
 #endif
 }
 
-#if SINGLE_PRODUCER
-#define NB_PRODUCERS 1
-#else
-#define NB_PRODUCERS 4
-#endif
-
-#if SINGLE_CONSUMER
-#define NB_CONSUMERS 1
-#else
-#define NB_CONSUMERS 8
-#endif
-
-#define NB_THREADS (NB_PRODUCERS + NB_CONSUMERS)
-
 int main(int argc, char* argv[])
 {
     (void)argc;
@@ -265,9 +314,14 @@ int main(int argc, char* argv[])
     int exit_code = 0;
 
     struct thread_context ctxt;
+    struct timer_chrono timer;
 
     sync_atomic_store(ctxt.m_stop_thread, false);
+    sync_atomic_store(ctxt.m_msg_count, NB_MSGS_PER_PRODUCER);
+    sync_atomic_store(ctxt.m_msg_skipped, 0);
     sync_write_release();
+
+    (void)init_timer_chrono(&timer);
 
     if (init_ring_buffer_mpmc(&(ctxt.m_fifo)) < 0)
     {
@@ -379,6 +433,8 @@ exit_main:
     /* signal to launch working */
     sync_object_broadcast(&(ctxt.m_start_sync));
 
+	double start_time = timer_chrono_current_time_ms(&timer);
+
     /* wait threads */
 
 #if defined(_WIN32)
@@ -406,6 +462,13 @@ exit_main:
     }
 
 #endif
+
+    double end_time = timer_chrono_current_time_ms(&timer);
+
+    long skip_counter = sync_atomic_load(ctxt.m_msg_skipped);
+    printf("\n%ld messages processed, %ld messages skipped\n", NB_MSGS_TOTAL - skip_counter, skip_counter);
+    printf("execution time is %lf ms\n", end_time - start_time);
+    printf("average of %lf ms per message processed\n", (end_time - start_time) / (NB_MSGS_TOTAL - skip_counter));
 
     (void)deinit_sync_object(&(ctxt.m_start_sync));
     (void)deinit_sync_object(&(ctxt.m_read_sync));

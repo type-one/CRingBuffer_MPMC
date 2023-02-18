@@ -107,6 +107,7 @@ file(GLOB_RECURSE TARGET_H
 set(TARGET_TOOLS_SRC
         tools/sync_object.c
         tools/ring_buffer_mpmc.c
+		tools/timer_chrono.c
 )
 
 set(TARGET_SRC

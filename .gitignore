@@ -53,3 +53,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+cmake_install.cmake
+
+CMakeCache.txt
+CMakeFiles/
+
+cringbuffer_mpsc

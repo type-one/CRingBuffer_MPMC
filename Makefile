@@ -204,6 +204,33 @@ tools/sync_object.c.s:
 	$(MAKE) -f CMakeFiles/cringbuffer_mpsc.dir/build.make CMakeFiles/cringbuffer_mpsc.dir/tools/sync_object.c.s
 .PHONY : tools/sync_object.c.s
 
+tools/timer_chrono.o: tools/timer_chrono.c.o
+
+.PHONY : tools/timer_chrono.o
+
+# target to build an object file
+tools/timer_chrono.c.o:
+	$(MAKE) -f CMakeFiles/cringbuffer_mpsc.dir/build.make CMakeFiles/cringbuffer_mpsc.dir/tools/timer_chrono.c.o
+.PHONY : tools/timer_chrono.c.o
+
+tools/timer_chrono.i: tools/timer_chrono.c.i
+
+.PHONY : tools/timer_chrono.i
+
+# target to preprocess a source file
+tools/timer_chrono.c.i:
+	$(MAKE) -f CMakeFiles/cringbuffer_mpsc.dir/build.make CMakeFiles/cringbuffer_mpsc.dir/tools/timer_chrono.c.i
+.PHONY : tools/timer_chrono.c.i
+
+tools/timer_chrono.s: tools/timer_chrono.c.s
+
+.PHONY : tools/timer_chrono.s
+
+# target to generate assembly for a file
+tools/timer_chrono.c.s:
+	$(MAKE) -f CMakeFiles/cringbuffer_mpsc.dir/build.make CMakeFiles/cringbuffer_mpsc.dir/tools/timer_chrono.c.s
+.PHONY : tools/timer_chrono.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -222,6 +249,9 @@ help:
 	@echo "... tools/sync_object.o"
 	@echo "... tools/sync_object.i"
 	@echo "... tools/sync_object.s"
+	@echo "... tools/timer_chrono.o"
+	@echo "... tools/timer_chrono.i"
+	@echo "... tools/timer_chrono.s"
 .PHONY : help
 
 

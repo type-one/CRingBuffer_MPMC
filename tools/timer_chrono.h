@@ -23,62 +23,62 @@
 
 #pragma once
 
-#if !defined(__RING_BUFFER_MPMC_H__)
-#define __RING_BUFFER_MPMC_H__
-
-#include "atomic_helper.h"
-
-#include <stdbool.h>
-#include <stdint.h>
+#if !defined(__TIMER_CHRONO_H__)
+#define __TIMER_CHRONO_H__
 
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined(__STDC_NO_THREADS__)
-#include <pthread.h>
-#else
-#include <threads.h>
+#elif defined(__MACH__)
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#elif defined(__unix__) || defined(__linux__)
+/* _POSIX_VERSION */
+#include <inttypes.h>
+#include <time.h>
+#include <unistd.h>
 #endif
 
-#if defined(RING_BUFFER_MPMC_IMPLEM)
-#define EXTERN_RING_BUFFER_MPMC
-#else
-#define EXTERN_RING_BUFFER_MPMC extern
-#endif
+#include <stdint.h>
 
 #if defined(__cplusplus)
 extern "C"
 {
 #endif
 
-#define RING_BUFFER_POW2 12U /* 2^x entries, can be growed up for no waits situations to limit buffer full cases */
-#define RING_BUFFER_SIZE (1ULL << RING_BUFFER_POW2)
-#define RING_BUFFER_MASK (RING_BUFFER_SIZE - 1ULL)
-
-    struct ring_buffer_mpmc
+    struct timer_chrono
     {
-        _atomic_uintptr m_buffer[RING_BUFFER_SIZE];
-        _atomic_llong m_read_idx;
-        _atomic_llong m_write_idx;
-        _atomic_bool m_reading;
-        _atomic_bool m_writing;
-
 #if defined(_WIN32)
-        CRITICAL_SECTION m_read_mutex;
-        CRITICAL_SECTION m_write_mutex;
-#elif defined(__STDC_NO_THREADS__)
-    pthread_mutex_t m_read_mutex;
-    pthread_mutex_t m_write_mutex;
-#else
-    mtx_t m_read_mutex;
-    mtx_t m_write_mutex;
+
+        LARGE_INTEGER m_qw_time;
+        LARGE_INTEGER m_qw_app_time;
+        double m_fapp_time;
+        double m_felapsed_time;
+        double m_fsecs_per_tick;
+
+#elif defined(__MACH__)
+
+        uint64_t m_start;
+        mach_timebase_info_data_t m_info;
+
+#elif defined(__unix__) || defined(__linux__)
+
+        struct timespec m_start;
+
 #endif
     };
 
-    EXTERN_RING_BUFFER_MPMC int init_ring_buffer_mpmc(struct ring_buffer_mpmc* fifo);
-    EXTERN_RING_BUFFER_MPMC int deinit_ring_buffer_mpmc(struct ring_buffer_mpmc* fifo);
-    EXTERN_RING_BUFFER_MPMC bool ring_buffer_push_sp(struct ring_buffer_mpmc* fifo, void* elem);
-    EXTERN_RING_BUFFER_MPMC bool ring_buffer_push_mp(struct ring_buffer_mpmc* fifo, void* elem);
-    EXTERN_RING_BUFFER_MPMC bool ring_buffer_pop_sc(struct ring_buffer_mpmc* fifo, void** elem);
-    EXTERN_RING_BUFFER_MPMC bool ring_buffer_pop_mc(struct ring_buffer_mpmc* fifo, void** elem);
 
-#endif /*  __RING_BUFFER_MPMC_H__ */
+#if defined(TIMER_CHRONO_IMPLEM)
+#define EXTERN_TIMER_CHRONO
+#else
+#define EXTERN_TIMER_CHRONO extern
+#endif
+
+    EXTERN_TIMER_CHRONO int init_timer_chrono(struct timer_chrono* ctxt);
+    EXTERN_TIMER_CHRONO double timer_chrono_current_time_ms(struct timer_chrono* ctxt);
+
+#if defined(__cplusplus)
+};
+#endif
+
+#endif //  __TIMER_CHRONO_H__

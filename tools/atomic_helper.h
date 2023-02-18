@@ -59,12 +59,14 @@ extern "C"
 #define _atomic_bool atomic_bool
 #define _atomic_ulong atomic_ulong
 #define _atomic_ullong atomic_ullong
+#define _atomic_long atomic_long
 #define _atomic_llong atomic_llong
 #define _atomic_uintptr atomic_uintptr_t
 #else
 #define _atomic_bool volatile bool
 #define _atomic_ulong volatile unsigned long
 #define _atomic_ullong volatile unsigned long long
+#define _atomic_long volatile long
 #define _atomic_llong volatile long long
 #define _atomic_uintptr volatile uintptr_t
 #endif
@@ -75,6 +77,8 @@ extern "C"
 #define sync_read_write()
 #define sync_atomic_inc_32(ref) atomic_fetch_add(&(ref), 1)
 #define sync_atomic_inc_64(ref) atomic_fetch_add(&(ref), 1)
+#define sync_atomic_dec_32(ref) atomic_fetch_sub(&(ref), 1)
+#define sync_atomic_dec_64(ref) atomic_fetch_sub(&(ref), 1)
 #define sync_atomic_load(ref) atomic_load(&(ref))
 #define sync_atomic_store(ref, val) atomic_store(&ref, val)
 #define sync_atomic_exchange_32(ref, val) atomic_exchange(&ref, val)
@@ -85,6 +89,8 @@ extern "C"
 #define sync_read_write() _ReadWriteBarrier()
 #define sync_atomic_inc_32(ref) InterlockedIncrementAcquire(&(ref))
 #define sync_atomic_inc_64(ref) InterlockedIncrementAcquire64(&(ref))
+#define sync_atomic_dec_32(ref) InterlockedDecrementAcquire(&(ref))
+#define sync_atomic_dec_64(ref) InterlockedDecrementAcquire64(&(ref))
 #define sync_atomic_load(ref) (ref)
 #define sync_atomic_store(ref, val) (ref = val)
 #define sync_atomic_exchange_32(ref, val) InterlockedExchangeAcquire(&ref, val)
@@ -96,6 +102,8 @@ extern "C"
 #define sync_read_write() __sync_synchronize()
 #define sync_atomic_inc_32(ref) __sync_fetch_and_add(&(ref), 1)
 #define sync_atomic_inc_64(ref) __sync_fetch_and_add(&(ref), 1)
+#define sync_atomic_dec_32(ref) __sync_fetch_and_sub(&(ref), 1)
+#define sync_atomic_dec_64(ref) __sync_fetch_and_sub(&(ref), 1)
 #define sync_atomic_load(ref) (ref)
 #define sync_atomic_store(ref, val) (ref = val)
 #if defined(__clang__)
