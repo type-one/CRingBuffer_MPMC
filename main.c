@@ -198,7 +198,10 @@ static int producer_thread(void* arg)
                 sync_atomic_inc_32(ctxt->m_msg_skipped);
                 dec_and_check_end(ctxt);
             }
-            else { sync_object_signal(&(ctxt->m_write_sync)); }
+            else
+            {
+                sync_object_signal(&(ctxt->m_write_sync));
+            }
         }
 
         /* wait reader, with a 1s timeout */
@@ -284,7 +287,9 @@ static int consumer_thread(void* arg)
 
 #if CONSUMER_SIMULATE_WORK_LOAD
             /* simulate some variable time processing */
-            for (int i = 0; i < (rand() & 0xffff); ++i) { }
+            for (int i = 0; i < (rand() & 0xffff); ++i)
+            {
+            }
 #endif
 
 #if !NO_DYNAMIC_ALLOC
@@ -433,7 +438,7 @@ exit_main:
     /* signal to launch working */
     sync_object_broadcast(&(ctxt.m_start_sync));
 
-	double start_time = timer_chrono_current_time_ms(&timer);
+    double start_time = timer_chrono_current_time_ms(&timer);
 
     /* wait threads */
 

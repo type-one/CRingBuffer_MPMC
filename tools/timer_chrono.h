@@ -57,12 +57,12 @@ extern "C"
 
 #elif defined(__MACH__)
 
-        uint64_t m_start;
-        mach_timebase_info_data_t m_info;
+    uint64_t m_start;
+    mach_timebase_info_data_t m_info;
 
 #elif defined(__unix__) || defined(__linux__)
 
-        struct timespec m_start;
+    struct timespec m_start;
 
 #endif
     };

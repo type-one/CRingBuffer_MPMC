@@ -54,12 +54,12 @@ extern "C"
         CRITICAL_SECTION m_mutex;
         CONDITION_VARIABLE m_cond;
 #elif defined(__STDC_NO_THREADS__)
-        pthread_mutex_t m_mutex;
-        pthread_cond_t m_cond;
-        pthread_condattr_t m_cond_attr;
+    pthread_mutex_t m_mutex;
+    pthread_cond_t m_cond;
+    pthread_condattr_t m_cond_attr;
 #else
-        mtx_t m_mutex;
-        cnd_t m_cond;
+    mtx_t m_mutex;
+    cnd_t m_cond;
 #endif
     };
 
